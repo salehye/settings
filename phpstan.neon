@@ -1,0 +1,10 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - tests/Unit/*
+        - tests/Feature/*
+    ignoreErrors:
+        - '#Unsafe usage of new static\(\)#'
