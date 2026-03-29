@@ -41,7 +41,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Salehye\\Settings\\Tests\\": "tests/"
+            "Salehye\\Settings\\Tests\\": "tests/",
+            "Salehye\\Settings\\Database\\Factories\\": "database/factories/"
         }
     },
     "extra": {
