@@ -131,11 +131,17 @@ class SettingsService
     }
 
     /**
-     * Get the label for a field.
+     * Get the label for a field by key.
      */
-    public function getLabel(string $group, string $key, ?string $locale = null): string
+    public function getLabel(string $key, ?string $locale = null): string
     {
         $locale ??= app()->getLocale();
+        $group = $this->findGroupForKey($key);
+
+        if ($group === null) {
+            return $key;
+        }
+
         $field = $this->getField($group, $key);
 
         if ($field === null || !isset($field['label'])) {
@@ -205,7 +211,7 @@ class SettingsService
             return;
         }
 
-        $label = $this->getLabel($group, $key);
+        $label = $this->getLabel($key);
 
         $validator = Validator::make(
             [$key => $value],
@@ -218,12 +224,55 @@ class SettingsService
     }
 
     /**
-     * Get the type of a setting.
+     * Get the type of a setting by key.
      */
-    public function getType(string $group, string $key): ?string
+    public function getType(string $key): ?string
     {
+        $group = $this->findGroupForKey($key);
+
+        if ($group === null) {
+            return null;
+        }
+
         $field = $this->getField($group, $key);
         return $field['type'] ?? null;
+    }
+
+    /**
+     * Check if a setting exists.
+     */
+    public function has(string $key): bool
+    {
+        $settings = $this->getAll();
+        return array_key_exists($key, $settings) || \Salehye\Settings\Models\Setting::where('key', $key)->exists();
+    }
+
+    /**
+     * Delete a setting.
+     */
+    public function delete(string $key): bool
+    {
+        $deleted = \Salehye\Settings\Models\Setting::where('key', $key)->delete();
+
+        if ($deleted) {
+            $this->clearCache();
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Find the config group for a given setting key.
+     */
+    protected function findGroupForKey(string $key): ?string
+    {
+        foreach (config('settings.fields', []) as $groupName => $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupName;
+            }
+        }
+
+        return null;
     }
 
     /**

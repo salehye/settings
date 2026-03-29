@@ -113,13 +113,34 @@ class Setting extends Model
      */
     public function getDefinition(): ?array
     {
-        $group = config("settings.fields.{$this->group}");
+        return self::getFieldDefinition($this->group, $this->key);
+    }
 
-        if ($group === null) {
+    /**
+     * Get field definition from config by group and key.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function getFieldDefinition(string $group, string $key): ?array
+    {
+        $groupConfig = config("settings.fields.{$group}");
+
+        if ($groupConfig === null) {
             return null;
         }
 
-        return $group['fields'][$this->key] ?? null;
+        return $groupConfig['fields'][$key] ?? null;
+    }
+
+    /**
+     * Get all field definitions for a group.
+     *
+     * @return array<string, mixed>
+     */
+    public static function getGroupFields(string $group): array
+    {
+        $groupConfig = config("settings.fields.{$group}");
+        return $groupConfig['fields'] ?? [];
     }
 
     /**

@@ -25,7 +25,7 @@ class SettingsController extends Controller
     public function index(): Response
     {
         $allSettings = $this->settingsService->getAll();
-        $definitions = config('settings.definitions', []);
+        $fieldsConfig = config('settings.fields', []);
 
         // Get all settings from database with their metadata
         $settingsFromDb = \Salehye\Settings\Models\Setting::all();
@@ -33,7 +33,7 @@ class SettingsController extends Controller
         $groupedSettings = $settingsFromDb
             ->map(fn($setting) => [
                 'key' => $setting->key,
-                'value' => $setting->value ?? $definitions[$setting->key]['default'] ?? null,
+                'value' => $setting->value ?? $this->getDefaultFromConfig($setting->key),
                 'type' => $setting->getDefinition()['type'] ?? $this->inferType($setting->value),
                 'group' => $setting->group,
                 'is_public' => $setting->is_public,
@@ -45,7 +45,7 @@ class SettingsController extends Controller
 
         return Inertia::render('Settings/Index', [
             'settings' => $groupedSettings,
-            'groups' => config('settings.groups', []),
+            'groups' => $this->getGroupsMetadata(),
         ]);
     }
 
@@ -55,12 +55,11 @@ class SettingsController extends Controller
     public function show(string $group): Response
     {
         $settings = \Salehye\Settings\Models\Setting::where('group', $group)->get();
-        $definitions = config('settings.definitions', []);
 
         $settingsData = $settings
             ->map(fn($setting) => [
                 'key' => $setting->key,
-                'value' => $setting->value ?? $definitions[$setting->key]['default'] ?? null,
+                'value' => $setting->value ?? $this->getDefaultFromConfig($setting->key),
                 'type' => $setting->getDefinition()['type'] ?? $this->inferType($setting->value),
                 'label' => $setting->getLabel(),
                 'rules' => $setting->getDefinition()['rules'] ?? [],
@@ -71,7 +70,46 @@ class SettingsController extends Controller
         return Inertia::render('Settings/Group', [
             'group' => $group,
             'settings' => $settingsData,
+            'groupMeta' => config("settings.fields.{$group}"),
         ]);
+    }
+
+    /**
+     * Get default value from config for a key.
+     */
+    protected function getDefaultFromConfig(string $key): mixed
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['default'] ?? null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get groups metadata with labels.
+     */
+    protected function getGroupsMetadata(): array
+    {
+        $locale = app()->getLocale();
+        $groups = [];
+
+        foreach (config('settings.fields', []) as $groupName => $groupData) {
+            $label = $groupData['label'] ?? $groupName;
+            $groups[$groupName] = [
+                'label' => is_array($label)
+                    ? ($label[$locale] ?? $label['en'] ?? $label['ar'] ?? $groupName)
+                    : $label,
+                'icon' => $groupData['icon'] ?? null,
+                'order' => $groupData['order'] ?? 999,
+                'is_system' => $groupData['is_system'] ?? false,
+            ];
+        }
+
+        return collect($groups)
+            ->sortBy('order')
+            ->toArray();
     }
 
     /**

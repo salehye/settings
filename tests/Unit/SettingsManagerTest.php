@@ -10,6 +10,62 @@ beforeEach(function () {
         include_once __DIR__ . '/../../database/migrations/create_settings_table.php.stub';
         (new \CreateSettingsTable())->up();
     }
+
+    // Set up test config for settings fields
+    config([
+        'settings.fields' => [
+            'general' => [
+                'label' => ['en' => 'General Settings', 'ar' => 'الإعدادات العامة'],
+                'icon' => 'fas fa-cog',
+                'order' => 1,
+                'fields' => [
+                    'site_name' => [
+                        'label' => ['en' => 'Site Name', 'ar' => 'اسم الموقع'],
+                        'type' => 'text',
+                        'rules' => ['required', 'string', 'max:255'],
+                        'default' => 'Default Site',
+                        'is_translatable' => true,
+                    ],
+                    'timezone' => [
+                        'label' => ['en' => 'Timezone', 'ar' => 'المنطقة الزمنية'],
+                        'type' => 'select',
+                        'default' => 'UTC',
+                    ],
+                    'maintenance_mode' => [
+                        'label' => ['en' => 'Maintenance Mode', 'ar' => 'وضع الصيانة'],
+                        'type' => 'boolean',
+                        'is_system' => true,
+                        'default' => false,
+                    ],
+                    'seo_keywords' => [
+                        'label' => ['en' => 'SEO Keywords', 'ar' => 'كلمات مفتاحية'],
+                        'type' => 'tags',
+                        'default' => [],
+                    ],
+                ],
+            ],
+            'seo' => [
+                'label' => ['en' => 'SEO Settings'],
+                'fields' => [
+                    'seo_title' => [
+                        'label' => ['en' => 'SEO Title'],
+                        'type' => 'text',
+                    ],
+                ],
+            ],
+            'system' => [
+                'label' => ['en' => 'System Settings'],
+                'is_system' => true,
+                'fields' => [
+                    'debug_mode' => [
+                        'label' => ['en' => 'Debug Mode'],
+                        'type' => 'boolean',
+                        'is_system' => true,
+                    ],
+                ],
+            ],
+        ]
+    ]);
 });
 
 it('can get a setting value', function () {
@@ -24,6 +80,10 @@ it('can get a setting value', function () {
 
 it('returns default value when setting not found', function () {
     expect(Settings::get('nonexistent', 'default_value'))->toBe('default_value');
+});
+
+it('returns config default when setting not found', function () {
+    expect(Settings::get('site_name'))->toBe('Default Site');
 });
 
 it('can set a setting value', function () {
@@ -70,8 +130,8 @@ it('can get settings by group', function () {
 
 it('can get public settings only', function () {
     // These keys are defined as public in config
-    Setting::create(['key' => 'site_name', 'group' => 'general', 'value' => 'Public Site']);
-    Setting::create(['key' => 'maintenance_mode', 'group' => 'system', 'value' => false]);
+    Setting::create(['key' => 'site_name', 'group' => 'general', 'value' => 'Public Site', 'is_public' => true, 'is_active' => true]);
+    Setting::create(['key' => 'maintenance_mode', 'group' => 'general', 'value' => false, 'is_public' => false, 'is_active' => true]);
 
     $publicSettings = Settings::public();
 
@@ -82,7 +142,7 @@ it('can get public settings only', function () {
 
 it('can get all settings', function () {
     Setting::create(['key' => 'site_name', 'group' => 'general', 'value' => 'All Site']);
-    Setting::create(['key' => 'maintenance_mode', 'group' => 'system', 'value' => true]);
+    Setting::create(['key' => 'maintenance_mode', 'group' => 'general', 'value' => true]);
 
     $allSettings = Settings::all();
 
@@ -107,9 +167,9 @@ it('can delete a setting', function () {
 });
 
 it('can get setting type', function () {
-    expect(Settings::type('site_name'))->toBe('string')
+    expect(Settings::type('site_name'))->toBe('text')
         ->and(Settings::type('maintenance_mode'))->toBe('boolean')
-        ->and(Settings::type('seo_keywords'))->toBe('json');
+        ->and(Settings::type('seo_keywords'))->toBe('tags');
 });
 
 it('can get setting label', function () {
@@ -118,6 +178,11 @@ it('can get setting label', function () {
 
     app()->setLocale('ar');
     expect(Settings::label('site_name'))->toBe('اسم الموقع');
+});
+
+it('can get setting label with default fallback', function () {
+    app()->setLocale('fr');
+    expect(Settings::label('site_name'))->toBe('Site Name'); // Falls back to en
 });
 
 it('can clear cache', function () {

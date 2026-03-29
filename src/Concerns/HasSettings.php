@@ -99,6 +99,100 @@ trait HasSettings
     }
 
     /**
+     * Get setting type.
+     */
+    protected function getSettingType(string $key): ?string
+    {
+        return Settings::type($key);
+    }
+
+    /**
+     * Get setting default value from config.
+     */
+    protected function getSettingDefault(string $key): mixed
+    {
+        return setting_default($key);
+    }
+
+    /**
+     * Get setting validation rules.
+     *
+     * @return array<int, string>
+     */
+    protected function getSettingRules(string $key): array
+    {
+        return setting_rules($key);
+    }
+
+    /**
+     * Get setting description.
+     */
+    protected function getSettingDescription(string $key, ?string $locale = null): string
+    {
+        return setting_description($key, $locale);
+    }
+
+    /**
+     * Check if a setting is translatable.
+     */
+    protected function settingIsTranslatable(string $key): bool
+    {
+        return setting_is_translatable($key);
+    }
+
+    /**
+     * Check if a setting is a system setting.
+     */
+    protected function settingIsSystem(string $key): bool
+    {
+        return setting_is_system($key);
+    }
+
+    /**
+     * Check if a setting is sensitive.
+     */
+    protected function settingIsSensitive(string $key): bool
+    {
+        return setting_is_sensitive($key);
+    }
+
+    /**
+     * Get settings group label.
+     */
+    protected function getSettingsGroupLabel(string $group, ?string $locale = null): string
+    {
+        return settings_group_label($group, $locale);
+    }
+
+    /**
+     * Get settings group icon.
+     */
+    protected function getSettingsGroupIcon(string $group): ?string
+    {
+        return settings_group_icon($group);
+    }
+
+    /**
+     * Get all fields for a settings group.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getSettingsGroupFields(string $group): array
+    {
+        return settings_group_fields($group);
+    }
+
+    /**
+     * Get field definition for a setting.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function getSettingField(string $key): ?array
+    {
+        return setting_field($key);
+    }
+
+    /**
      * Clear settings cache.
      */
     protected function clearSettingsCache(): void

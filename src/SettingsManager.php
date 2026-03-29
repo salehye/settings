@@ -123,17 +123,7 @@ class SettingsManager
     }
 
     /**
-     * Get the setting type.
-     *
-     * @param string $key The setting key
-     */
-    public function type(string $key): ?string
-    {
-        return $this->service->getType($key);
-    }
-
-    /**
-     * Get the setting label.
+     * Get the setting label with multilingual support.
      *
      * @param string $key The setting key
      * @param string|null $locale The locale
@@ -141,6 +131,40 @@ class SettingsManager
     public function label(string $key, ?string $locale = null): string
     {
         return $this->service->getLabel($key, $locale);
+    }
+
+    /**
+     * Get all labels for a group.
+     *
+     * @param string $group The group name
+     * @param string|null $locale The locale
+     * @return array<string, string>
+     */
+    public function groupLabels(string $group, ?string $locale = null): array
+    {
+        return $this->service->getGroupLabels($group, $locale);
+    }
+
+    /**
+     * Get form data for a group (for UI rendering).
+     *
+     * @param string $group The group name
+     * @param string|null $locale The locale
+     * @return array<string, mixed>
+     */
+    public function formData(string $group, ?string $locale = null): array
+    {
+        return $this->service->getFormData($group, $locale);
+    }
+
+    /**
+     * Validate a setting value.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function validate(string $key, mixed $value, ?string $group = null): void
+    {
+        $this->service->validate($key, $value, $group);
     }
 
     /**

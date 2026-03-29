@@ -85,3 +85,220 @@ if (!function_exists('settings_all')) {
         return Settings::all();
     }
 }
+
+if (!function_exists('setting_label')) {
+    /**
+     * Get the label for a setting.
+     *
+     * @param string $key The setting key
+     * @param string|null $locale The locale (defaults to current app locale)
+     * @return string
+     */
+    function setting_label(string $key, ?string $locale = null): string
+    {
+        return Settings::label($key, $locale);
+    }
+}
+
+if (!function_exists('setting_type')) {
+    /**
+     * Get the type of a setting.
+     *
+     * @param string $key The setting key
+     * @return string|null
+     */
+    function setting_type(string $key): ?string
+    {
+        return Settings::type($key);
+    }
+}
+
+if (!function_exists('setting_default')) {
+    /**
+     * Get the default value for a setting from config.
+     *
+     * @param string $key The setting key
+     * @return mixed
+     */
+    function setting_default(string $key): mixed
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['default'] ?? null;
+            }
+        }
+        return null;
+    }
+}
+
+if (!function_exists('setting_rules')) {
+    /**
+     * Get the validation rules for a setting.
+     *
+     * @param string $key The setting key
+     * @return array<int, string>
+     */
+    function setting_rules(string $key): array
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['rules'] ?? [];
+            }
+        }
+        return [];
+    }
+}
+
+if (!function_exists('setting_description')) {
+    /**
+     * Get the description for a setting.
+     *
+     * @param string $key The setting key
+     * @param string|null $locale The locale (defaults to current app locale)
+     * @return string
+     */
+    function setting_description(string $key, ?string $locale = null): string
+    {
+        $locale ??= app()->getLocale();
+
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                $description = $groupData['fields'][$key]['description'] ?? '';
+
+                if (is_array($description)) {
+                    return $description[$locale] ?? $description['en'] ?? $description['ar'] ?? '';
+                }
+
+                return (string) $description;
+            }
+        }
+        return '';
+    }
+}
+
+if (!function_exists('setting_is_translatable')) {
+    /**
+     * Check if a setting is translatable.
+     *
+     * @param string $key The setting key
+     * @return bool
+     */
+    function setting_is_translatable(string $key): bool
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['is_translatable'] ?? false;
+            }
+        }
+        return false;
+    }
+}
+
+if (!function_exists('setting_is_system')) {
+    /**
+     * Check if a setting is a system setting.
+     *
+     * @param string $key The setting key
+     * @return bool
+     */
+    function setting_is_system(string $key): bool
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['is_system'] ?? false;
+            }
+        }
+        return false;
+    }
+}
+
+if (!function_exists('setting_is_sensitive')) {
+    /**
+     * Check if a setting is sensitive.
+     *
+     * @param string $key The setting key
+     * @return bool
+     */
+    function setting_is_sensitive(string $key): bool
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key]['is_sensitive'] ?? false;
+            }
+        }
+        return false;
+    }
+}
+
+if (!function_exists('settings_group_label')) {
+    /**
+     * Get the label for a settings group.
+     *
+     * @param string $group The group name
+     * @param string|null $locale The locale (defaults to current app locale)
+     * @return string
+     */
+    function settings_group_label(string $group, ?string $locale = null): string
+    {
+        $locale ??= app()->getLocale();
+        $groupConfig = config("settings.fields.{$group}");
+
+        if ($groupConfig === null) {
+            return $group;
+        }
+
+        $label = $groupConfig['label'] ?? $group;
+
+        if (is_array($label)) {
+            return $label[$locale] ?? $label['en'] ?? $label['ar'] ?? $group;
+        }
+
+        return (string) $label;
+    }
+}
+
+if (!function_exists('settings_group_icon')) {
+    /**
+     * Get the icon for a settings group.
+     *
+     * @param string $group The group name
+     * @return string|null
+     */
+    function settings_group_icon(string $group): ?string
+    {
+        $groupConfig = config("settings.fields.{$group}");
+        return $groupConfig['icon'] ?? null;
+    }
+}
+
+if (!function_exists('settings_group_fields')) {
+    /**
+     * Get all field definitions for a settings group.
+     *
+     * @param string $group The group name
+     * @return array<string, mixed>
+     */
+    function settings_group_fields(string $group): array
+    {
+        $groupConfig = config("settings.fields.{$group}");
+        return $groupConfig['fields'] ?? [];
+    }
+}
+
+if (!function_exists('setting_field')) {
+    /**
+     * Get field definition for a setting.
+     *
+     * @param string $key The setting key
+     * @return array<string, mixed>|null
+     */
+    function setting_field(string $key): ?array
+    {
+        foreach (config('settings.fields', []) as $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key];
+            }
+        }
+        return null;
+    }
+}

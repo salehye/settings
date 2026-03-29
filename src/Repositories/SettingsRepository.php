@@ -52,7 +52,8 @@ class SettingsRepository implements SettingsRepositoryInterface
         }
 
         // Fall back to config default
-        return config("settings.definitions.{$key}.default") ?? $default;
+        $definition = $this->getFieldDefinition($key);
+        return $definition['default'] ?? $default;
     }
 
     /**
@@ -63,8 +64,8 @@ class SettingsRepository implements SettingsRepositoryInterface
         $setting = Setting::firstOrNew(['key' => $key]);
 
         // Get metadata from definition or use defaults
-        $definition = config("settings.definitions.{$key}");
-        $setting->group = $definition['group'] ?? 'general';
+        $definition = $this->getFieldDefinition($key);
+        $setting->group = $definition['group'] ?? $this->findGroupForKey($key);
 
         // Only set is_public from config if not already set in database
         if ($setting->is_public === null && isset($definition['is_public'])) {
@@ -82,6 +83,34 @@ class SettingsRepository implements SettingsRepositoryInterface
     }
 
     /**
+     * Get field definition from config.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function getFieldDefinition(string $key): ?array
+    {
+        foreach (config('settings.fields', []) as $group => $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $groupData['fields'][$key];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find the group for a given key.
+     */
+    protected function findGroupForKey(string $key): string
+    {
+        foreach (config('settings.fields', []) as $group => $groupData) {
+            if (isset($groupData['fields'][$key])) {
+                return $group;
+            }
+        }
+        return 'general';
+    }
+
+    /**
      * Get multiple settings by keys.
      *
      * @param array<int, string> $keys
@@ -93,9 +122,18 @@ class SettingsRepository implements SettingsRepositoryInterface
 
         return collect($keys)
             ->mapWithKeys(fn(string $key) => [
-                $key => $settings[$key] ?? config("settings.definitions.{$key}.default"),
+                $key => $settings[$key] ?? $this->getDefaultFor($key),
             ])
             ->toArray();
+    }
+
+    /**
+     * Get default value for a key from config.
+     */
+    protected function getDefaultFor(string $key): mixed
+    {
+        $definition = $this->getFieldDefinition($key);
+        return $definition['default'] ?? null;
     }
 
     /**

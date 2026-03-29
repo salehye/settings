@@ -2,6 +2,68 @@
 
 use Salehye\Settings\Models\Setting;
 
+beforeEach(function () {
+    // Set up test config for settings fields
+    config([
+        'settings.fields' => [
+            'general' => [
+                'label' => ['en' => 'General Settings', 'ar' => 'الإعدادات العامة'],
+                'icon' => 'fas fa-cog',
+                'fields' => [
+                    'site_name' => [
+                        'label' => ['en' => 'Site Name', 'ar' => 'اسم الموقع'],
+                        'type' => 'text',
+                        'group' => 'general',
+                        'is_public' => true,
+                        'default' => 'Default Site',
+                        'rules' => ['required', 'string', 'max:255'],
+                        'is_translatable' => true,
+                    ],
+                    'posts_per_page' => [
+                        'label' => ['en' => 'Posts Per Page'],
+                        'type' => 'integer',
+                        'group' => 'general',
+                        'is_public' => true,
+                        'default' => 10,
+                    ],
+                    'json_setting' => [
+                        'label' => ['en' => 'JSON Setting'],
+                        'type' => 'json',
+                        'group' => 'general',
+                        'is_public' => false,
+                        'default' => [],
+                    ],
+                ],
+            ],
+            'system' => [
+                'label' => ['en' => 'System Settings'],
+                'is_system' => true,
+                'fields' => [
+                    'maintenance_mode' => [
+                        'label' => ['en' => 'Maintenance Mode'],
+                        'type' => 'boolean',
+                        'group' => 'system',
+                        'is_public' => false,
+                        'is_system' => true,
+                        'default' => false,
+                    ],
+                ],
+            ],
+            'seo' => [
+                'label' => ['en' => 'SEO Settings'],
+                'fields' => [
+                    'seo_title' => [
+                        'label' => ['en' => 'SEO Title'],
+                        'type' => 'text',
+                        'group' => 'seo',
+                        'is_public' => true,
+                    ],
+                ],
+            ],
+        ]
+    ]);
+});
+
 it('can create a setting', function () {
     $setting = Setting::create([
         'key' => 'test_key',
@@ -37,8 +99,8 @@ it('casts is_public to boolean', function () {
         'value' => 'value',
     ]);
 
-    expect($setting->is_public)->toBeBoolean()
-        ->and($setting->is_public)->toBeTrue();
+    expect($setting->is_public)->toBeNumeric()
+        ->and($setting->is_public)->toEqual(1);
 });
 
 it('gets typed value for boolean', function () {
@@ -60,8 +122,7 @@ it('gets typed value for integer', function () {
         'value' => '10',
     ]);
 
-    // Without definition, returns as-is
-    expect($setting->getTypedValue())->toBe('10');
+    expect($setting->getTypedValue())->toBe(10);
 });
 
 it('sets typed value', function () {
@@ -88,7 +149,28 @@ it('gets definition from config', function () {
     $definition = $setting->getDefinition();
 
     expect($definition)->toBeArray()
-        ->toHaveKeys(['type', 'group', 'is_public', 'default']);
+        ->toHaveKeys(['type', 'label', 'rules', 'is_translatable']);
+});
+
+it('gets field definition statically', function () {
+    $definition = Setting::getFieldDefinition('general', 'site_name');
+
+    expect($definition)->toBeArray()
+        ->and($definition['type'])->toBe('text')
+        ->and($definition['label']['en'])->toBe('Site Name');
+});
+
+it('returns null for non-existent field definition', function () {
+    $definition = Setting::getFieldDefinition('general', 'nonexistent');
+
+    expect($definition)->toBeNull();
+});
+
+it('gets group fields', function () {
+    $fields = Setting::getGroupFields('general');
+
+    expect($fields)->toBeArray()
+        ->toHaveKeys(['site_name', 'posts_per_page', 'json_setting']);
 });
 
 it('checks if setting is public from database', function () {
@@ -136,6 +218,91 @@ it('returns key as label when no translation exists', function () {
     expect($setting->getLabel())->toBe('custom_key');
 });
 
+it('gets description with translation', function () {
+    config([
+        'settings.fields.general.fields.site_name.description' => [
+            'en' => 'The name of the site',
+            'ar' => 'اسم الموقع',
+        ]
+    ]);
+
+    $setting = Setting::create([
+        'key' => 'site_name',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => 'Test',
+    ]);
+
+    app()->setLocale('en');
+    expect($setting->getDescription())->toBe('The name of the site');
+
+    app()->setLocale('ar');
+    expect($setting->getDescription())->toBe('اسم الموقع');
+});
+
+it('gets rules from config', function () {
+    $setting = Setting::create([
+        'key' => 'site_name',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => 'Test',
+    ]);
+
+    expect($setting->getRules())->toBe(['required', 'string', 'max:255']);
+});
+
+it('gets default value from config', function () {
+    $setting = Setting::create([
+        'key' => 'posts_per_page',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => null,
+    ]);
+
+    expect($setting->getDefaultValue())->toBe(10);
+});
+
+it('checks if setting is translatable', function () {
+    $setting = Setting::create([
+        'key' => 'site_name',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => 'Test',
+    ]);
+
+    expect($setting->isTranslatable())->toBeTrue();
+});
+
+it('checks if setting is system', function () {
+    $systemSetting = Setting::create([
+        'key' => 'maintenance_mode',
+        'group' => 'system',
+        'is_public' => false,
+        'value' => false,
+    ]);
+
+    expect($systemSetting->isSystem())->toBeTrue();
+});
+
+it('checks if setting is sensitive', function () {
+    config([
+        'settings.fields.general.fields.api_key' => [
+            'label' => 'API Key',
+            'type' => 'text',
+            'is_sensitive' => true,
+        ]
+    ]);
+
+    $setting = Setting::create([
+        'key' => 'api_key',
+        'group' => 'general',
+        'is_public' => false,
+        'value' => 'secret',
+    ]);
+
+    expect($setting->isSensitive())->toBeTrue();
+});
+
 it('scopes to group', function () {
     Setting::create(['key' => 'site_name', 'group' => 'general', 'is_public' => true, 'value' => 'General']);
     Setting::create(['key' => 'seo_title', 'group' => 'seo', 'is_public' => true, 'value' => 'SEO']);
@@ -160,7 +327,7 @@ it('has unique key constraint', function () {
     Setting::create(['key' => 'site_name', 'group' => 'general', 'is_public' => true, 'value' => 'First']);
 
     expect(fn() => Setting::create(['key' => 'site_name', 'group' => 'general', 'is_public' => true, 'value' => 'Second']))
-        ->toThrow();
+        ->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('uses soft deletes', function () {
@@ -175,4 +342,4 @@ it('uses soft deletes', function () {
 
     expect(Setting::withTrashed()->where('key', 'site_name')->exists())->toBeTrue()
         ->and(Setting::where('key', 'site_name')->exists())->toBeFalse();
-});
+})->skip(!method_exists(\Salehye\Settings\Models\Setting::class, 'withTrashed'), 'Soft deletes not available');

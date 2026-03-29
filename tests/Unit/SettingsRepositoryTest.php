@@ -3,6 +3,44 @@
 use Salehye\Settings\Repositories\SettingsRepository;
 use Salehye\Settings\Models\Setting;
 
+beforeEach(function () {
+    // Set up test config for settings fields
+    config([
+        'settings.fields' => [
+            'general' => [
+                'label' => ['en' => 'General Settings'],
+                'fields' => [
+                    'site_name' => [
+                        'label' => ['en' => 'Site Name'],
+                        'type' => 'text',
+                        'default' => 'Default Site',
+                    ],
+                    'timezone' => [
+                        'label' => ['en' => 'Timezone'],
+                        'type' => 'select',
+                        'default' => 'UTC',
+                    ],
+                    'maintenance_mode' => [
+                        'label' => ['en' => 'Maintenance Mode'],
+                        'type' => 'boolean',
+                        'is_system' => true,
+                        'default' => false,
+                    ],
+                ],
+            ],
+            'seo' => [
+                'label' => ['en' => 'SEO Settings'],
+                'fields' => [
+                    'seo_title' => [
+                        'label' => ['en' => 'SEO Title'],
+                        'type' => 'text',
+                    ],
+                ],
+            ],
+        ]
+    ]);
+});
+
 it('can get a setting from repository', function () {
     Setting::create([
         'key' => 'site_name',
@@ -21,6 +59,13 @@ it('returns default when setting not found in repository', function () {
     config(['settings.cache.enabled' => false]);
 
     expect($repository->get('nonexistent', 'default'))->toBe('default');
+});
+
+it('returns config default when setting not found', function () {
+    $repository = new SettingsRepository();
+    config(['settings.cache.enabled' => false]);
+
+    expect($repository->get('site_name'))->toBe('Default Site');
 });
 
 it('can set a setting in repository', function () {
@@ -76,7 +121,7 @@ it('can get settings by group', function () {
 
 it('can get public settings', function () {
     Setting::create(['key' => 'site_name', 'group' => 'general', 'value' => 'Public']);
-    Setting::create(['key' => 'maintenance_mode', 'group' => 'system', 'value' => false]);
+    Setting::create(['key' => 'maintenance_mode', 'group' => 'general', 'value' => false]);
 
     $repository = new SettingsRepository();
     config(['settings.cache.enabled' => false]);
