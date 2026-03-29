@@ -101,40 +101,117 @@ class SettingsService
     }
 
     /**
-     * Check if a setting exists.
+     * Get all groups with their metadata.
+     *
+     * @return array<string, mixed>
      */
-    public function has(string $key): bool
+    public function getGroups(): array
     {
-        return $this->repository->has($key);
+        return config('settings.fields', []);
     }
 
     /**
-     * Delete a setting.
+     * Get a specific group's metadata.
+     *
+     * @return array<string, mixed>|null
      */
-    public function delete(string $key): bool
+    public function getGroupMeta(string $group): ?array
     {
-        return $this->repository->delete($key);
+        return config("settings.fields.{$group}");
+    }
+
+    /**
+     * Get field definition.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getField(string $group, string $key): ?array
+    {
+        return config("settings.fields.{$group}.fields.{$key}");
+    }
+
+    /**
+     * Get the label for a field.
+     */
+    public function getLabel(string $group, string $key, ?string $locale = null): string
+    {
+        $locale ??= app()->getLocale();
+        $field = $this->getField($group, $key);
+
+        if ($field === null || !isset($field['label'])) {
+            return $key;
+        }
+
+        $label = $field['label'];
+
+        if (is_array($label)) {
+            return $label[$locale] ?? $label['en'] ?? $label['ar'] ?? $key;
+        }
+
+        return (string) $label;
+    }
+
+    /**
+     * Get all labels for a group.
+     *
+     * @return array<string, string>
+     */
+    public function getGroupLabels(string $group, ?string $locale = null): array
+    {
+        $locale ??= app()->getLocale();
+        $groupMeta = $this->getGroupMeta($group);
+
+        if ($groupMeta === null) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($groupMeta['fields'] ?? [] as $key => $field) {
+            $label = $field['label'] ?? $key;
+
+            if (is_array($label)) {
+                $labels[$key] = $label[$locale] ?? $label['en'] ?? $label['ar'] ?? $key;
+            } else {
+                $labels[$key] = (string) $label;
+            }
+        }
+
+        return $labels;
     }
 
     /**
      * Validate a setting value against its rules.
-     * Only validates if rules are defined in config.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function validate(string $key, mixed $value): void
+    public function validate(string $key, mixed $value, ?string $group = null): void
     {
-        $definition = config("settings.definitions.{$key}");
+        if ($group === null) {
+            foreach (config('settings.fields', []) as $groupName => $groupData) {
+                if (isset($groupData['fields'][$key])) {
+                    $group = $groupName;
+                    break;
+                }
+            }
+        }
 
-        if ($definition === null || !isset($definition['rules'])) {
+        if ($group === null) {
             return;
         }
 
+        $field = $this->getField($group, $key);
+
+        if ($field === null || !isset($field['rules'])) {
+            return;
+        }
+
+        $label = $this->getLabel($group, $key);
+
         $validator = Validator::make(
             [$key => $value],
-            [$key => $definition['rules']],
+            [$key => $field['rules']],
             [],
-            [$key => $definition['translations']['en'] ?? $key]
+            [$key => $label]
         );
 
         $validator->validate();
@@ -143,37 +220,48 @@ class SettingsService
     /**
      * Get the type of a setting.
      */
-    public function getType(string $key): ?string
+    public function getType(string $group, string $key): ?string
     {
-        $definition = config("settings.definitions.{$key}");
-        return $definition['type'] ?? null;
+        $field = $this->getField($group, $key);
+        return $field['type'] ?? null;
     }
 
     /**
-     * Get the group of a setting.
+     * Get the validation rules for a setting.
+     *
+     * @return array<int, string>
      */
-    public function getGroup(string $key): ?string
+    public function getRules(string $group, string $key): array
     {
-        $definition = config("settings.definitions.{$key}");
-        return $definition['group'] ?? null;
+        $field = $this->getField($group, $key);
+        return $field['rules'] ?? [];
     }
 
     /**
-     * Get the label of a setting.
+     * Check if a field is translatable.
      */
-    public function getLabel(string $key, ?string $locale = null): string
+    public function isTranslatable(string $group, string $key): bool
     {
-        $definition = config("settings.definitions.{$key}");
+        $field = $this->getField($group, $key);
+        return $field['is_translatable'] ?? false;
+    }
 
-        if ($definition === null || !isset($definition['translations'])) {
-            return $key;
-        }
+    /**
+     * Check if a field is sensitive.
+     */
+    public function isSensitive(string $group, string $key): bool
+    {
+        $field = $this->getField($group, $key);
+        return $field['is_sensitive'] ?? false;
+    }
 
-        $locale ??= app()->getLocale();
-
-        return $definition['translations'][$locale]
-            ?? $definition['translations']['en']
-            ?? $key;
+    /**
+     * Get the default value for a setting.
+     */
+    public function getDefaultValue(string $group, string $key): mixed
+    {
+        $field = $this->getField($group, $key);
+        return $field['default'] ?? null;
     }
 
     /**
@@ -190,5 +278,96 @@ class SettingsService
     public function reload(): void
     {
         $this->repository->reload();
+    }
+
+    /**
+     * Get form data for a group (for UI rendering).
+     *
+     * @return array<string, mixed>
+     */
+    public function getFormData(string $group, ?string $locale = null): array
+    {
+        $locale ??= app()->getLocale();
+        $groupMeta = $this->getGroupMeta($group);
+
+        if ($groupMeta === null) {
+            return [];
+        }
+
+        $settings = $this->getByGroup($group);
+
+        return [
+            'label' => is_array($groupMeta['label'] ?? '')
+                ? ($groupMeta['label'][$locale] ?? $groupMeta['label']['en'] ?? $group)
+                : $groupMeta['label'],
+            'icon' => $groupMeta['icon'] ?? null,
+            'order' => $groupMeta['order'] ?? 999,
+            'fields' => collect($groupMeta['fields'] ?? [])
+                ->map(fn(array $field, string $key) => [
+                    'key' => $key,
+                    'type' => $field['type'] ?? 'text',
+                    'label' => is_array($field['label'] ?? '')
+                        ? ($field['label'][$locale] ?? $field['label']['en'] ?? $field['label']['ar'] ?? $key)
+                        : $field['label'],
+                    'description' => isset($field['description'])
+                        ? (is_array($field['description'])
+                            ? ($field['description'][$locale] ?? $field['description']['en'] ?? '')
+                            : $field['description'])
+                        : null,
+                    'placeholder' => isset($field['placeholder'])
+                        ? (is_array($field['placeholder'])
+                            ? ($field['placeholder'][$locale] ?? $field['placeholder']['en'] ?? '')
+                            : $field['placeholder'])
+                        : null,
+                    'rules' => $field['rules'] ?? [],
+                    'value' => $settings[$key] ?? $field['default'] ?? null,
+                    'is_translatable' => $field['is_translatable'] ?? false,
+                    'is_sensitive' => $field['is_sensitive'] ?? false,
+                    'is_system' => $field['is_system'] ?? false,
+                    'options' => $this->processOptions($field['options'] ?? null, $locale),
+                    'ui' => collect($field)->only([
+                        'icon',
+                        'rows',
+                        'cols',
+                        'min',
+                        'max',
+                        'step',
+                        'accepted',
+                        'dimensions',
+                        'max_size',
+                        'counter',
+                        'pattern',
+                        'searchable',
+                        'monospace',
+                        'warning',
+                        'requires_restart',
+                        'repeater_fields'
+                    ])->toArray(),
+                ])
+                ->sortBy('order')
+                ->toArray(),
+        ];
+    }
+
+    /**
+     * Process options for select fields (multilingual support).
+     *
+     * @param array<string, mixed>|null $options
+     */
+    protected function processOptions(?array $options, ?string $locale = null): array
+    {
+        if ($options === null) {
+            return [];
+        }
+
+        $locale ??= app()->getLocale();
+
+        return collect($options)
+            ->map(
+                fn($option) => is_array($option)
+                ? ($option[$locale] ?? $option['en'] ?? $option['ar'] ?? reset($option))
+                : $option
+            )
+            ->toArray();
     }
 }

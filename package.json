@@ -1,0 +1,35 @@
+{
+    "name": "salehye/settings-inertia",
+    "version": "1.0.0",
+    "description": "InertiaJS components for Salehye Settings Package",
+    "main": "resources/js/index.js",
+    "types": "resources/js/types/settings.ts",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [
+        "laravel",
+        "inertia",
+        "settings",
+        "vue",
+        "react"
+    ],
+    "author": "Saleh",
+    "license": "MIT",
+    "peerDependencies": {
+        "@inertiajs/vue3": "^2.0.0",
+        "@inertiajs/react": "^2.0.0",
+        "vue": "^3.4.0",
+        "react": "^18.0.0",
+        "typescript": "^5.0.0"
+    },
+    "exports": {
+        "./vue/composables": "./resources/js/vue/composables/useSettings.ts",
+        "./vue/components": "./resources/js/vue/components/",
+        "./react/composables": "./resources/js/react/composables/useSettings.ts",
+        "./react/components": "./resources/js/react/components/",
+        "./types": "./resources/js/types/settings.ts"
+    }
+}

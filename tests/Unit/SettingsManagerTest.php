@@ -4,6 +4,14 @@ use Salehye\Settings\Facades\Settings;
 use Salehye\Settings\Models\Setting;
 use Salehye\Settings\SettingsManager;
 
+beforeEach(function () {
+    // Run the settings table migration before each test
+    if (!Schema::hasTable('settings')) {
+        include_once __DIR__ . '/../../database/migrations/create_settings_table.php.stub';
+        (new \CreateSettingsTable())->up();
+    }
+});
+
 it('can get a setting value', function () {
     Setting::create([
         'key' => 'site_name',

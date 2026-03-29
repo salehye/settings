@@ -12,9 +12,6 @@ abstract class TestCase extends BaseTestCase
 
     /**
      * Get package providers.
-     *
-     * @param \Illuminate\Foundation\Application $app
-     * @return array<int, class-string<\Illuminate\Support\ServiceProvider>>
      */
     protected function getPackageProviders($app): array
     {
@@ -28,25 +25,13 @@ abstract class TestCase extends BaseTestCase
      */
     protected function defineEnvironment($app): void
     {
-        // Setup default database to use sqlite :memory:
-        $app['config']->set('database.default', 'testbench');
-        $app['config']->set('database.connections.testbench', [
+        $app['config']->set('database.default', 'sqlite');
+        $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite',
             'database' => ':memory:',
         ]);
 
-        // Setup cache
         $app['config']->set('cache.default', 'array');
-
-        // Setup settings config
         $app['config']->set('settings.cache.enabled', false);
-    }
-
-    /**
-     * Define database migrations.
-     */
-    protected function defineDatabaseMigrations(): void
-    {
-        $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
     }
 }

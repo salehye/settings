@@ -15,7 +15,7 @@ it('can create a setting', function () {
         ->and($setting->group)->toBe('general')
         ->and($setting->is_public)->toBeFalse()
         ->and($setting->value)->toBe('test_value');
-});
+})->group('model');
 
 it('casts value to array', function () {
     $setting = Setting::create([
