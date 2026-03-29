@@ -33,6 +33,12 @@ class SettingsServiceProvider extends ServiceProvider
             fn($app) => new SettingsManager()
         );
 
+        // Bind ImageHandler as singleton
+        $this->app->singleton(
+            \Salehye\Settings\Services\ImageHandler::class,
+            fn($app) => new \Salehye\Settings\Services\ImageHandler()
+        );
+
         // Load helpers
         $this->loadHelpersFrom(__DIR__ . '/helpers.php');
     }

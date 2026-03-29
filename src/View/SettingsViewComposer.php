@@ -2,10 +2,10 @@
 
 namespace Salehye\Settings\View;
 
-use Illuminate\View\Composer;
+use Illuminate\Contracts\View\View;
 use Salehye\Settings\Services\SettingsService;
 
-class SettingsViewComposer implements Composer
+class SettingsViewComposer
 {
     /**
      * Create a new view composer instance.
@@ -18,7 +18,7 @@ class SettingsViewComposer implements Composer
     /**
      * Bind data to the view.
      */
-    public function compose($view): void
+    public function compose(View $view): void
     {
         $locale = app()->getLocale();
 

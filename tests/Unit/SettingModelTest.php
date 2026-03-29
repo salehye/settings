@@ -19,6 +19,14 @@ beforeEach(function () {
                         'rules' => ['required', 'string', 'max:255'],
                         'is_translatable' => true,
                     ],
+                    'site_logo' => [
+                        'label' => ['en' => 'Site Logo', 'ar' => 'شعار الموقع'],
+                        'type' => 'image',
+                        'group' => 'general',
+                        'is_public' => true,
+                        'default' => null,
+                        'rules' => ['nullable', 'image', 'max:2048'],
+                    ],
                     'posts_per_page' => [
                         'label' => ['en' => 'Posts Per Page'],
                         'type' => 'integer',
@@ -343,3 +351,92 @@ it('uses soft deletes', function () {
     expect(Setting::withTrashed()->where('key', 'site_name')->exists())->toBeTrue()
         ->and(Setting::where('key', 'site_name')->exists())->toBeFalse();
 })->skip(!method_exists(\Salehye\Settings\Models\Setting::class, 'withTrashed'), 'Soft deletes not available');
+
+it('can save image path as setting value', function () {
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => '/uploads/logos/site-logo-123.png',
+    ]);
+
+    expect($logo->value)->toBe('/uploads/logos/site-logo-123.png')
+        ->and($logo->getType())->toBe('image');
+});
+
+it('can save image metadata', function () {
+    $imageData = [
+        'path' => '/uploads/logos/site-logo.png',
+        'original_name' => 'logo.png',
+        'mime_type' => 'image/png',
+        'size' => 102400,
+        'width' => 200,
+        'height' => 200,
+    ];
+
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => $imageData,
+    ]);
+
+    expect($logo->value)->toBeArray()
+        ->toHaveKey('path', '/uploads/logos/site-logo.png')
+        ->toHaveKey('mime_type', 'image/png')
+        ->toHaveKey('size', 102400);
+});
+
+it('can get typed value for image type', function () {
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => '/uploads/logos/site-logo.png',
+    ]);
+
+    // Image type should return as array or string based on definition
+    expect($logo->getTypedValue())->toBe('/uploads/logos/site-logo.png');
+});
+
+it('can check if setting is image type', function () {
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => '/uploads/logos/site-logo.png',
+    ]);
+
+    expect($logo->isImage())->toBeTrue();
+});
+
+it('can get image URL', function () {
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => '/uploads/logos/site-logo.png',
+    ]);
+
+    expect($logo->getImageUrl())->toBe('/uploads/logos/site-logo.png');
+});
+
+it('can get image data as array', function () {
+    $imageData = [
+        'path' => '/uploads/logos/site-logo.png',
+        'original_name' => 'logo.png',
+        'mime_type' => 'image/png',
+        'size' => 102400,
+    ];
+
+    $logo = Setting::create([
+        'key' => 'site_logo',
+        'group' => 'general',
+        'is_public' => true,
+        'value' => $imageData,
+    ]);
+
+    expect($logo->getImageData())->toBeArray()
+        ->toHaveKey('path', '/uploads/logos/site-logo.png')
+        ->toHaveKey('mime_type', 'image/png');
+});

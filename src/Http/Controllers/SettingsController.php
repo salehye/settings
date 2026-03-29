@@ -142,6 +142,125 @@ class SettingsController extends Controller
     }
 
     /**
+     * Upload an image for a setting.
+     */
+    public function uploadImage(Request $request, string $key): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|image',
+        ]);
+
+        try {
+            $file = $request->file('image');
+            $directory = $request->input('directory');
+            $disk = $request->input('disk');
+
+            $imageData = $this->settingsService->uploadImage(
+                $key,
+                $file,
+                $directory,
+                $disk
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image uploaded successfully',
+                'data' => $imageData,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload image: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload a base64 encoded image.
+     */
+    public function uploadBase64Image(Request $request, string $key): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|string',
+            'filename' => 'nullable|string',
+        ]);
+
+        try {
+            $imageData = $this->settingsService->uploadBase64Image(
+                $key,
+                $request->input('image'),
+                $request->input('filename'),
+                $request->input('directory'),
+                $request->input('disk')
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image uploaded successfully',
+                'data' => $imageData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload image: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete an image setting.
+     */
+    public function deleteImage(string $key): JsonResponse
+    {
+        try {
+            $deleted = $this->settingsService->deleteImage($key);
+
+            if (!$deleted) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No image found to delete',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image deleted successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete image: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get the image URL for a setting.
+     */
+    public function getImageUrl(string $key): JsonResponse
+    {
+        $url = $this->settingsService->getImageUrl($key);
+
+        if (!$url) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No image found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+        ]);
+    }
+
+    /**
      * Get public settings for API/Inertia consumption.
      */
     public function public(): JsonResponse

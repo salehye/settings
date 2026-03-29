@@ -1278,4 +1278,35 @@ return [
         'rate_limit' => 60, // requests per minute
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Upload Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'upload' => [
+        'disk' => 'public', // Default storage disk
+        'default_rules' => [
+            'max_size' => 2048, // KB (2MB)
+            'allowed_types' => [
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
+            ],
+        ],
+        'image' => [
+            'quality' => 90,
+            'auto_resize' => false,
+            'max_width' => null,
+            'max_height' => null,
+            'generate_thumbnails' => false,
+            'thumbnail_sizes' => [
+                // ['width' => 150, 'height' => 150, 'suffix' => '_thumb'],
+                // ['width' => 300, 'height' => 300, 'suffix' => '_medium'],
+            ],
+        ],
+    ],
+
 ];

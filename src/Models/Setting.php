@@ -412,6 +412,145 @@ class Setting extends Model
     }
 
     /**
+     * Check if this setting is an image type.
+     */
+    public function isImage(): bool
+    {
+        $definition = $this->getDefinition();
+        return in_array($definition['type'] ?? '', ['image', 'file']);
+    }
+
+    /**
+     * Get the image URL.
+     */
+    public function getImageUrl(): ?string
+    {
+        if (!$this->isImage()) {
+            return null;
+        }
+
+        $value = $this->value;
+
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            return $value['path'] ?? null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the image metadata.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getImageData(): ?array
+    {
+        if (!$this->isImage()) {
+            return null;
+        }
+
+        $value = $this->value;
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return [
+                'path' => $value,
+                'filename' => basename($value),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Update the image with a new uploaded file.
+     *
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @param  string|null  $directory
+     * @param  string|null  $disk
+     * @return $this
+     */
+    public function updateImage(
+        \Illuminate\Http\UploadedFile $file,
+        ?string $directory = null,
+        ?string $disk = null
+    ): self {
+        $imageHandler = app(\Salehye\Settings\Services\ImageHandler::class);
+
+        // Delete old image if exists
+        $this->deleteImage();
+
+        // Upload new image
+        $directory ??= "settings/{$this->group}";
+        $imageData = $imageHandler->upload($file, $directory, $disk);
+
+        $this->value = $imageData;
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Delete the image file.
+     */
+    public function deleteImage(): bool
+    {
+        if (!$this->isImage()) {
+            return false;
+        }
+
+        $imageHandler = app(\Salehye\Settings\Services\ImageHandler::class);
+        $deleted = $imageHandler->delete($this->value);
+
+        if ($deleted) {
+            $this->value = null;
+            $this->save();
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Resize the image.
+     *
+     * @param  int  $width
+     * @param  int  $height
+     * @return $this
+     */
+    public function resizeImage(int $width, int $height): self
+    {
+        if (!$this->isImage()) {
+            return $this;
+        }
+
+        $imageHandler = app(\Salehye\Settings\Services\ImageHandler::class);
+        $imageData = $this->getImageData();
+
+        if ($imageData && isset($imageData['directory'], $imageData['filename'], $imageData['disk'])) {
+            $path = $imageData['directory'] . '/' . $imageData['filename'];
+            $resizedPath = $imageHandler->resize($path, $width, $height, $imageData['disk']);
+
+            $this->value = array_merge($imageData, [
+                'path' => \Illuminate\Support\Facades\Storage::disk($imageData['disk'])->url($resizedPath),
+                'filename' => basename($resizedPath),
+                'width' => $width,
+                'height' => $height,
+            ]);
+
+            $this->save();
+        }
+
+        return $this;
+    }
+
+    /**
      * Scope a query to get all partners.
      *
      * @param \Illuminate\Database\Eloquent\Builder<static> $query

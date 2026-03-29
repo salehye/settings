@@ -302,3 +302,100 @@ if (!function_exists('setting_field')) {
         return null;
     }
 }
+
+if (!function_exists('upload_setting_image')) {
+    /**
+     * Upload an image for a setting.
+     *
+     * @param string $key The setting key
+     * @param \Illuminate\Http\UploadedFile $file The uploaded file
+     * @param string|null $directory Optional directory
+     * @param string|null $disk Optional disk
+     * @return array<string, mixed>|null
+     */
+    function upload_setting_image(
+        string $key,
+        \Illuminate\Http\UploadedFile $file,
+        ?string $directory = null,
+        ?string $disk = null
+    ): ?array {
+        return \Salehye\Settings\Facades\Settings::uploadImage($key, $file, $directory, $disk);
+    }
+}
+
+if (!function_exists('upload_setting_base64_image')) {
+    /**
+     * Upload a base64 encoded image for a setting.
+     *
+     * @param string $key The setting key
+     * @param string $base64Image The base64 encoded image
+     * @param string|null $filename Optional filename
+     * @param string|null $directory Optional directory
+     * @param string|null $disk Optional disk
+     * @return array<string, mixed>|null
+     */
+    function upload_setting_base64_image(
+        string $key,
+        string $base64Image,
+        ?string $filename = null,
+        ?string $directory = null,
+        ?string $disk = null
+    ): ?array {
+        return \Salehye\Settings\Facades\Settings::uploadBase64Image($key, $base64Image, $filename, $directory, $disk);
+    }
+}
+
+if (!function_exists('delete_setting_image')) {
+    /**
+     * Delete an image setting.
+     *
+     * @param string $key The setting key
+     * @return bool
+     */
+    function delete_setting_image(string $key): bool
+    {
+        return \Salehye\Settings\Facades\Settings::deleteImage($key);
+    }
+}
+
+if (!function_exists('setting_image_url')) {
+    /**
+     * Get the image URL for a setting.
+     *
+     * @param string $key The setting key
+     * @param string|null $default Default URL if not found
+     * @return string|null
+     */
+    function setting_image_url(string $key, ?string $default = null): ?string
+    {
+        return \Salehye\Settings\Facades\Settings::getImageUrl($key, $default);
+    }
+}
+
+if (!function_exists('setting_is_image')) {
+    /**
+     * Check if a setting is an image type.
+     *
+     * @param string $key The setting key
+     * @return bool
+     */
+    function setting_is_image(string $key): bool
+    {
+        $setting = \Salehye\Settings\Models\Setting::where('key', $key)->first();
+        return $setting ? $setting->isImage() : false;
+    }
+}
+
+if (!function_exists('setting_image_data')) {
+    /**
+     * Get the image data for a setting.
+     *
+     * @param string $key The setting key
+     * @return array<string, mixed>|null
+     */
+    function setting_image_data(string $key): ?array
+    {
+        $setting = \Salehye\Settings\Models\Setting::where('key', $key)->first();
+        return $setting ? $setting->getImageData() : null;
+    }
+}

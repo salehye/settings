@@ -419,4 +419,162 @@ class SettingsService
             )
             ->toArray();
     }
+
+    /**
+     * Upload an image for a setting.
+     *
+     * @param  string  $key
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @param  string|null  $directory
+     * @param  string|null  $disk
+     * @param  bool  $validate
+     * @return array<string, mixed>|null
+     */
+    public function uploadImage(
+        string $key,
+        \Illuminate\Http\UploadedFile $file,
+        ?string $directory = null,
+        ?string $disk = null,
+        bool $validate = true
+    ): ?array {
+        if ($validate) {
+            $this->validateImage($key, $file);
+        }
+
+        $imageHandler = app(ImageHandler::class);
+        $directory ??= $this->getImageDirectory($key);
+
+        $imageData = $imageHandler->upload($file, $directory, $disk);
+
+        $this->set($key, $imageData);
+
+        return $imageData;
+    }
+
+    /**
+     * Upload a base64 encoded image for a setting.
+     *
+     * @param  string  $key
+     * @param  string  $base64Image
+     * @param  string|null  $filename
+     * @param  string|null  $directory
+     * @param  string|null  $disk
+     * @return array<string, mixed>|null
+     */
+    public function uploadBase64Image(
+        string $key,
+        string $base64Image,
+        ?string $filename = null,
+        ?string $directory = null,
+        ?string $disk = null
+    ): ?array {
+        $imageHandler = app(ImageHandler::class);
+        $filename ??= $key . '_' . time();
+        $directory ??= $this->getImageDirectory($key);
+
+        $imageData = $imageHandler->uploadBase64($base64Image, $filename, $directory, $disk);
+
+        $this->set($key, $imageData);
+
+        return $imageData;
+    }
+
+    /**
+     * Delete an image setting.
+     *
+     * @param  string  $key
+     * @return bool
+     */
+    public function deleteImage(string $key): bool
+    {
+        $setting = \Salehye\Settings\Models\Setting::where('key', $key)->first();
+
+        if (!$setting || !$setting->isImage()) {
+            return false;
+        }
+
+        return $setting->deleteImage();
+    }
+
+    /**
+     * Get the image URL for a setting.
+     *
+     * @param  string  $key
+     * @param  string|null  $default
+     * @return string|null
+     */
+    public function getImageUrl(string $key, ?string $default = null): ?string
+    {
+        $setting = \Salehye\Settings\Models\Setting::where('key', $key)->first();
+
+        if (!$setting) {
+            return $default;
+        }
+
+        return $setting->getImageUrl() ?? $default;
+    }
+
+    /**
+     * Validate an image file against field rules.
+     *
+     * @param  string  $key
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @return void
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function validateImage(string $key, \Illuminate\Http\UploadedFile $file): void
+    {
+        $group = $this->findGroupForKey($key);
+
+        if ($group === null) {
+            return;
+        }
+
+        $field = $this->getField($group, $key);
+
+        if ($field === null || !isset($field['rules'])) {
+            return;
+        }
+
+        $imageHandler = app(ImageHandler::class);
+
+        // Extract image-specific rules
+        $imageRules = [];
+
+        if (in_array('image', $field['rules'])) {
+            $imageRules['allowed_types'] = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        }
+
+        // Parse max size rule
+        foreach ($field['rules'] as $rule) {
+            if (str_starts_with($rule, 'max:')) {
+                $imageRules['max_size'] = (int) substr($rule, 4) * 1024; // Convert to KB
+            }
+        }
+
+        // Check for dimensions in field config
+        if (isset($field['dimensions'])) {
+            if (isset($field['dimensions']['max_width'])) {
+                $imageRules['max_width'] = $field['dimensions']['max_width'];
+            }
+            if (isset($field['dimensions']['max_height'])) {
+                $imageRules['max_height'] = $field['dimensions']['max_height'];
+            }
+        }
+
+        $imageHandler->validate($file, $imageRules);
+    }
+
+    /**
+     * Get the default image directory for a setting.
+     *
+     * @param  string  $key
+     * @return string
+     */
+    protected function getImageDirectory(string $key): string
+    {
+        $group = $this->findGroupForKey($key);
+        return "settings/{$group}";
+    }
 }
